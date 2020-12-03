@@ -21,6 +21,13 @@ class WeatherVC: UIViewController, UICollectionViewDelegate, UICollectionViewDat
     @IBOutlet weak var weatherInfoView: UIView!
     @IBOutlet weak var weatherInfoBackgroundImg: UIImageView!
     @IBOutlet weak var weatherDescription: UILabel!
+    @IBOutlet weak var feelsLikeTemp: UILabel!
+    @IBOutlet weak var dayTemp: UILabel!
+    @IBOutlet weak var nightTemp: UILabel!
+    @IBOutlet weak var sunriseTime: UILabel!
+    @IBOutlet weak var sunsetTime: UILabel!
+    @IBOutlet weak var detailsInfoView: UIView!
+    @IBOutlet weak var dateTitleLbl: UILabel!
     
     var getTodaysWeather = true
     var hourly: HourlyRoot?
@@ -28,35 +35,60 @@ class WeatherVC: UIViewController, UICollectionViewDelegate, UICollectionViewDat
     var weatherRoot: WeatherRoot?
     let locationManager = CLLocationManager()
     var locationCoordinates = CLLocationCoordinate2D()
+    var refreshControl = UIRefreshControl()
     
     override func viewDidLoad() {
         super.viewDidLoad()
 
         SetupBackgroundImage()
         
+        //collection view setup
         weatherCollectionView.delegate = self
         weatherCollectionView.dataSource = self
         
+        //update UIView properties
         weatherInfoView.layer.cornerRadius = 15
         weatherInfoView.layer.masksToBounds = true
+        detailsInfoView.layer.cornerRadius = 15
+        detailsInfoView.layer.masksToBounds = true
+        //label property
+        dateTitleLbl.layer.cornerRadius = 15
+        dateTitleLbl.layer.masksToBounds = true
         
+        //init location manager
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.requestWhenInUseAuthorization()
         locationManager.startUpdatingLocation()
         
+        refreshControl.attributedTitle = NSAttributedString(string: "Pull to refresh")
+        refreshControl.addTarget(self, action: #selector(PullToRefresh(_:)), for: .valueChanged)
+        weatherCollectionView.refreshControl = refreshControl
+        
+        //initially hide UIViews
+        weatherInfoView.isHidden = true
+        detailsInfoView.isHidden = true
+        
     }
     
+    @objc func PullToRefresh(_ sender: AnyObject) {
+        print("rr- called refresh poull")
+        GetWeather(getTodaysWeather: getTodaysWeather)
+        weatherCollectionView.reloadData()
+        
+        refreshControl.endRefreshing()
+    }
+    
+    //CLLocationManager delegate function
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let locationValue: CLLocationCoordinate2D = manager.location?.coordinate else { return }
     
         locationCoordinates = locationValue
-        //convert to negative for longitude number
-        
         
         let geoCoder = CLGeocoder()
         let location = CLLocation(latitude: locationCoordinates.latitude, longitude: locationCoordinates.longitude)
         
+        //get name of city based on coordinates
         geoCoder.reverseGeocodeLocation(location, completionHandler: { placemarks, error -> Void in
             guard let placeMark = placemarks?.first else { return }
             
@@ -65,23 +97,27 @@ class WeatherVC: UIViewController, UICollectionViewDelegate, UICollectionViewDat
             }
         })
         
+        //convert to negative for longitude number
         locationCoordinates.longitude *= -1
         //get initial weather data
         GetWeather(getTodaysWeather: getTodaysWeather)
     }
     
+    //Assign and display a background image on the view
     func SetupBackgroundImage() {
         //set background image
         let backgroundImage = UIImageView(frame: UIScreen.main.bounds)
-        backgroundImage.image = UIImage(named: "night.png")
+        backgroundImage.image = UIImage(named: "mountains.png")
         backgroundImage.contentMode = UIView.ContentMode.scaleAspectFill
         self.view.insertSubview(backgroundImage, at: 0)
     }
 
+    //refresh weather when button is tapped
     @IBAction func RefreshWeatherBtnTapped(_ sender: Any) {
+        GetWeather(getTodaysWeather: getTodaysWeather)
     }
     
-    
+    //toggle weather display based on which segment is selected
     @IBAction func SegmentControlSwitched(_ sender: Any) {
         switch segmentControl.selectedSegmentIndex {
         case 0:
@@ -96,59 +132,80 @@ class WeatherVC: UIViewController, UICollectionViewDelegate, UICollectionViewDat
             print("Nothing selected")
             break
         }
-        
+        //update weather view
         GetWeather(getTodaysWeather: getTodaysWeather)
     }
     
+    //Get and display the weather
     func GetWeather(getTodaysWeather: Bool) {
         WeatherService.sharedService.GetWeather(locationValue: locationCoordinates) { (weatherData, hourlyData, dailyData) in
+            
+            //show the ui views
+            self.weatherInfoView.isHidden = false
+            self.detailsInfoView.isHidden = false
+            
+            //show todays weather
             if getTodaysWeather {
                 //get daily weather
                 self.SetWeatherInfoViewData(weatherData: weatherData)
                 self.ParseHourlyData(hourlyRoot: hourlyData)
                 self.weatherRoot = weatherData
+                self.daily = dailyData
+                self.UpdateDetailsInfoView()
             }
             else {
                 //get weekly data
                 self.ParseWeeklyWeatherData(dailyData: dailyData)
             }
         } onError: { (errorMessage) in
-            debugPrint("ww- in viewDidLoad: error: \(errorMessage)")
+            debugPrint("Parsing error: \(errorMessage)")
         }
     }
     
+    //update the details UIView when there is data
+    func UpdateDetailsInfoView() {
+        //verify weatherRoot is not empty
+        if let data = weatherRoot {
+            feelsLikeTemp.text = "\(Int(data.current.feels_like))°"
+            sunriseTime.text = "\(data.current.sunrise)".formattedTime
+            sunsetTime.text = "\(data.current.sunset)".formattedTime
+            dateTitleLbl.text = "\(data.current.dt)".formattedDate
+        }
+        //verify daily is not empty
+        if let dailyData = daily {
+            dayTemp.text = "\(Int(dailyData.daily[0].temp.day))°"
+            nightTemp.text = "\(Int(dailyData.daily[0].temp.night))°"
+        }
+    }
+    
+    //update the weather info UIView when there is data
     func SetWeatherInfoViewData(weatherData: WeatherRoot) {
         let weatherMain = weatherData.current.weather[0].main
         var backgroundImageName = ""
         var currentWeatherName = ""
-        var currentWeatherImageName = ""
-        var description = weatherData.current.weather[0].description
+        let description = weatherData.current.weather[0].description
         let currentTemp = weatherData.current.temp
-        let currentTime = "\(weatherData.current.dt)".formattedTime
-        let sunsetTime = "\(weatherData.current.sunset)".formattedTime
         
+        //check what weather condition and apply image based on name
         if weatherMain.hasPrefix(WeatherConstants.CLOUDY) {
-            if currentTime >= sunsetTime {
+            if weatherData.current.dt >= weatherData.current.sunset {
                 //show night icon
-                currentWeatherName = "scatteredCloudsNight.png"
+                currentWeatherName = "nightIcon.png"
             }
             else {
-                currentWeatherName = "scatteredClouds.png"
+                currentWeatherName = "PartiallyCloudy.png"
             }
             backgroundImageName = "cloudyDay.jpg"
-//            currentWeatherName = "Cloudy.png"
         }
         else if weatherMain.hasPrefix(WeatherConstants.CLEAR_SKY) {
-            if currentTime >= sunsetTime {
+            if weatherData.current.dt >= weatherData.current.sunset {
                 currentWeatherName = "clearSkyNight.png"
                 backgroundImageName = "nightSky.jpg"
             }
             else {
-                currentWeatherName = "clearSkyDay.png"
-                backgroundImageName = "sunnyDay.jpg"
+                currentWeatherName = "Sunny.png"
+                backgroundImageName = "sky.jpg"
             }
-//            backgroundImageName = "sunnyDay.jpg"
-//            currentWeatherName = "Sunny.png"
         }
         else if weatherMain.hasPrefix(WeatherConstants.THUNDERSTORM) {
             backgroundImageName = "thunderstorm.jpg"
@@ -163,22 +220,26 @@ class WeatherVC: UIViewController, UICollectionViewDelegate, UICollectionViewDat
             currentWeatherName = "Snow.png"
         }
     
+        //update the images and labels
         weatherInfoBackgroundImg.image = UIImage(named: backgroundImageName)
         currentWeatherImg.image = UIImage(named: currentWeatherName)
         weatherDescription.text = description.capitalized
         currentTempLbl.text = "\(Int(currentTemp))°"
     }
     
+    //reload collection view when data changes
     func ParseWeeklyWeatherData(dailyData: DailyRoot) {
         daily = dailyData
         weatherCollectionView.reloadData()
     }
     
+    //reload collection view when data changes
     func ParseHourlyData(hourlyRoot: HourlyRoot) {
         hourly = hourlyRoot
         weatherCollectionView.reloadData()
     }
     
+    //animate UILabel
     func AnimateTextLabel(label: UILabel) {
         let scaleTransform = CGAffineTransform(scaleX: 2.5, y: 2.5)
         let backToNormal = CGAffineTransform(scaleX: 1.0, y: 1.0)
@@ -191,6 +252,7 @@ class WeatherVC: UIViewController, UICollectionViewDelegate, UICollectionViewDat
         })
     }
     
+    //COLLECTION VIEW DELEGATE FUNCTIONS
     func numberOfSections(in collectionView: UICollectionView) -> Int {
         return 1
     }
@@ -212,14 +274,11 @@ class WeatherVC: UIViewController, UICollectionViewDelegate, UICollectionViewDat
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        print("hello")
         if let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "weatherCell", for: indexPath) as? weatherViewCell {
-            print("calling cell.updateView")
             if getTodaysWeather {
                 //display daily
                 if let dailyHours = hourly, let current = weatherRoot {
                     cell.UpdateDailyView(hour: dailyHours.hourly[indexPath.row], current: current)
-                    
                 }
             }
             else {
@@ -228,11 +287,9 @@ class WeatherVC: UIViewController, UICollectionViewDelegate, UICollectionViewDat
                     cell.UpdateWeeklyView(daily: weeklyDays.daily[indexPath.row])
                 }
             }
-            
             return cell
         }
         else {
-            print("custom view not getting called")
             return UICollectionViewCell()
         }
     }

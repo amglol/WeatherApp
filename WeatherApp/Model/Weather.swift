@@ -25,12 +25,15 @@ struct DailyTempData: Codable {
     let day: Double
     let min: Double
     let max: Double
+    let night: Double
 }
 
 struct CurrentData: Codable {
     let dt: Int //epoch time
     let temp: Double //default = kelvin
     let sunset: Int //epoch time
+    let sunrise: Int
+    let feels_like: Double
     let weather: [WeatherData]
 }
 

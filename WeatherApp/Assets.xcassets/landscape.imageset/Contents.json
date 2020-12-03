@@ -1,17 +1,16 @@
 {
   "images" : [
     {
-      "filename" : "Partially Cloudy.png",
+      "filename" : "landscape.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "Partially Cloudy@2x.png",
+      "filename" : "landscape@2x.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "Partially Cloudy@3x.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

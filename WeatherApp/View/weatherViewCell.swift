@@ -16,29 +16,34 @@ class weatherViewCell: UICollectionViewCell {
     let WEEKLY = 2
     var weatherId = 0
     
+    //update todays weather view
     func UpdateDailyView(hour: HourlyData, current: WeatherRoot) {
         let condition = hour.weather[0].main
-        let currentTime = "\(current.current.dt)".formattedTime
-        let sunsetTime = "\(current.current.sunset)".formattedTime
         
-        isNight = currentTime >= sunsetTime ? true : false
+        //check if it is night
+        isNight = current.current.dt >= current.current.sunset ? true : false
         weatherId = TODAY
         
+        //display correct icon based on day / night
         DisplayCorrectWeatherIcon(condition: condition, isNight: isNight, id: weatherId)
         
+        //update labels
         timePeriod.text = "\(hour.dt)".formattedTime
         temperature.text = "\(Int(hour.temp))"
     }
     
+    //update weekly weather view
     func UpdateWeeklyView(daily: DailyData) {
         let condition = daily.weather[0].main
         weatherId = WEEKLY
+        //update icons
         DisplayCorrectWeatherIcon(condition: condition, isNight: isNight, id: weatherId)
-        
+        //update labels
         temperature.text = "\(Int(daily.temp.max))"
         timePeriod.text = "\(daily.dt)".formattedDay
     }
     
+    //display weather icon based on isNight flag
     func DisplayCorrectWeatherIcon(condition: String, isNight: Bool, id: Int) {
         if condition == WeatherConstants.CLOUDY {
             if isNight && id == TODAY {
@@ -61,7 +66,6 @@ class weatherViewCell: UICollectionViewCell {
             else {
                 weatherImg.image = UIImage(named: "Sunny.png")
             }
-            
         }
         else if condition == WeatherConstants.SNOW {
             weatherImg.image = UIImage(named: "Snow.png")

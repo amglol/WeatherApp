@@ -1,18 +1,11 @@
 //
-//  TempConverter.swift
+//  DateFormatter.swift
 //  WeatherApp
 //
-//  Created by Adrian Galecki on 12/1/20.
+//  Created by Adrian Galecki on 12/3/20.
 //
 
 import Foundation
-
-extension Double {
-    var kelvinToFahrenheit: Double {
-        let kelvinMax = 459.67
-        return (self * (9/5) - kelvinMax)
-    }
-}
 
 extension String {
     var formattedTime: String {
@@ -30,6 +23,16 @@ extension String {
         let formatter = DateFormatter()
         formatter.timeZone = TimeZone(abbreviation: "EST")
         formatter.dateFormat = "EE dd"
+        return formatter.string(from: date)
+    }
+}
+
+extension String {
+    var formattedDate: String {
+        let date = Date(timeIntervalSince1970: TimeInterval(Int(self)!))
+        let formatter = DateFormatter()
+        formatter.timeZone = TimeZone(abbreviation: "EST")
+        formatter.dateFormat = "EEEE, MMM d, yyyy"
         return formatter.string(from: date)
     }
 }
