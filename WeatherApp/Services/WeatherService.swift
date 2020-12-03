@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import CoreLocation
 
 class WeatherService {
     //create singleton
@@ -24,16 +25,19 @@ class WeatherService {
     let API_DAYS = "days="
     let API_LAT = "lat="
     let API_LON = "&lon="
+    let API_UNITS = "&units=imperial"
     let API_EXCLUDE = "exclude"
     
     //create the session
     let session = URLSession(configuration: .default)
     
-    func GetWeather(onSuccess: @escaping (WeatherRoot, HourlyRoot) -> Void, onError: @escaping (String) -> Void) {
+    func GetWeather(locationValue: CLLocationCoordinate2D, onSuccess: @escaping (WeatherRoot, HourlyRoot, DailyRoot) -> Void, onError: @escaping (String) -> Void) {
         print("ww- IN GetWeather()")
-        let lat = 39.9526
-        let lon = 75.1652
-        let createdURL = URL(string: "\(URL_BASE)\(API_LAT)\(lat)\(API_LON)\(lon)\(KEY_START)\(API_KEY)")!
+        let lat = locationValue.latitude
+        var lon = -1.0
+        lon = lon * locationValue.longitude
+        print("cord- lat:\(lat), long:\(lon)")
+        let createdURL = URL(string: "\(URL_BASE)\(API_LAT)\(lat)\(API_LON)\(lon)\(API_UNITS)\(KEY_START)\(API_KEY)")!
         //verify weather url is populated
 //        guard let weatherURL = createdURL else { return }
         print("ww- createdURL = \(createdURL)")
@@ -62,9 +66,10 @@ class WeatherService {
                         //parse succesfful result
                         let weatherData = try JSONDecoder().decode(WeatherRoot.self, from: incomingData)
                         let hourlyData = try JSONDecoder().decode(HourlyRoot.self, from: incomingData)
+                        let dailyData = try JSONDecoder().decode(DailyRoot.self, from: incomingData)
                         
                         //handle success
-                        onSuccess(weatherData, hourlyData)
+                        onSuccess(weatherData, hourlyData, dailyData)
                     }
                     else {
                         print("ww- error received in THIRD place")

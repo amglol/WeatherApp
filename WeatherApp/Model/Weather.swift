@@ -11,9 +11,26 @@ struct WeatherRoot: Codable {
     let current: CurrentData
 }
 
+struct DailyRoot: Codable {
+    let daily: [DailyData]
+}
+
+struct DailyData: Codable {
+    let dt: Int
+    let temp: DailyTempData
+    let weather: [WeatherData]
+}
+
+struct DailyTempData: Codable {
+    let day: Double
+    let min: Double
+    let max: Double
+}
+
 struct CurrentData: Codable {
     let dt: Int //epoch time
     let temp: Double //default = kelvin
+    let sunset: Int //epoch time
     let weather: [WeatherData]
 }
 
@@ -30,4 +47,13 @@ struct HourlyData: Codable {
     let dt: Int //epoch time
     let temp: Double //default = kelvin
     let weather: [WeatherData]
+}
+
+struct WeatherConstants {
+    static let CLOUDY = "Clouds"
+    static let CLEAR_SKY = "Clear"
+    static let RAINY = "Rain"
+    static let DRIZZLE = "Drizzle"
+    static let THUNDERSTORM = "Thunderstorm"
+    static let SNOW = "Snow"
 }
